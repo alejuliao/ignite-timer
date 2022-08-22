@@ -1,5 +1,7 @@
 import { Play } from 'phosphor-react'
-import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as zod from 'zod'
 import {
   CountdownContainer,
   FormContainer,
@@ -10,22 +12,42 @@ import {
   MinutesAmountInput,
 } from './styles'
 
+const newCycleFormValidadeSchema = zod.object({
+  tak: zod.string().min(1, 'Informe a tarefa'),
+  minutesAmount: zod
+    .number()
+    .min(5, 'O ciclo precisa ser de no min 5 min')
+    .max(60, 'O ciclo precisa ser de no max 60 min'),
+})
+// interface NewCycleFormData {
+//   task: string
+//   minutesAmount: number
+// }
+type NewCycleFormData = zod.infer<typeof newCycleFormValidadeSchema>
+
 export function Home() {
-  const [task, setTask] = useState('')
-  function resetForm() {
-    setTask('')
+  const { register, handleSubmit, watch } = useForm<NewCycleFormData>({
+    resolver: zodResolver(newCycleFormValidadeSchema),
+    defaultValues: {
+      task: '',
+      minutesAmount: 0,
+    },
+  })
+  function handleCreateNewCycle(data: NewCycleFormData) {
+    console.log(data)
   }
+  const task = watch('task')
+  const isSubmitDisabled = !task
   return (
     <HomeContainer>
-      <form action="">
+      <form onSubmit={handleSubmit(handleCreateNewCycle)} action="">
         <FormContainer>
           <label htmlFor="task">Vou trabalhar em</label>
           <TaskInput
             list="task-suggestion"
             id="task"
             placeholder="Dê um nome para o seu projeto"
-            onChange={(e) => setTask(e.target.value)}
-            value={task}
+            {...register('task')}
           />
           <datalist id="task-suggestion">
             <option value="projeto 0" />
@@ -41,6 +63,7 @@ export function Home() {
             step={5}
             min={5}
             max={60}
+            {...register('minutesAmount', { valueAsNumber: true })}
           />
           <span>minutos.</span>
         </FormContainer>
@@ -51,7 +74,7 @@ export function Home() {
           <span>0</span>
           <span>0</span>
         </CountdownContainer>
-        <StartCountdownButton disabled={!task} type="submit">
+        <StartCountdownButton type="submit" disabled={isSubmitDisabled}>
           <Play size={24} />
           Começar
         </StartCountdownButton>
