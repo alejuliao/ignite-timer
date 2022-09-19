@@ -5,93 +5,56 @@ import {
   StartCountdownButton,
   StopCountdownButton,
 } from './styles'
-import { createContext, useState } from 'react'
-// import { differenceInSeconds } from 'date-fns'
-// import { NewCycleForm } from './components/newCycleForm'
+import { useContext } from 'react'
+
 import { CountDown } from './components/CountDown'
-interface Cycle {
-  id: string
-  task: string
-  minutesAmount: number
-  startDate: Date
-  interruptedDate?: Date
-  finishedDate?: Date
-  // isActive: boolean
-}
-interface CyclesContentType {
-  activeCycle: Cycle | undefined
-  activeCycleId: string | null
-  markCurrenteCycleAsFinished: () => void
-}
-export const CyclesContext = createContext({} as CyclesContentType)
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as zod from 'zod'
+import { FormProvider, useForm } from 'react-hook-form'
+import { NewCycleForm } from './components/newCycleForm'
+import { CyclesContext } from '../../contexts/CyclesContext'
+
+const newCycleFormValidadeSchema = zod.object({
+  task: zod.string().min(5, 'Informe a tarefa'),
+  minutesAmount: zod
+    .number()
+    .min(5, 'O ciclo precisa ser de no min 5 min')
+    .max(60, 'O ciclo precisa ser de no max 60 min'),
+})
+type NewCycleFormData = zod.infer<typeof newCycleFormValidadeSchema>
+
 export function Home() {
-  const [cycles, setCycles] = useState<Cycle[]>([])
-  const [activeCycleId, setActiveCycleId] = useState<string | null>(null)
-
-  const activeCycle = cycles.find((cycle) => cycle.id === activeCycleId)
-
-  function markCurrenteCycleAsFinished() {
-    setCycles((state) =>
-      state.map((cycle) => {
-        if (cycle.id === activeCycleId) {
-          return { ...cycle, finishedDate: new Date() }
-        } else {
-          return cycle
-        }
-      }),
-    )
+  const { activeCycle, createNewCycle, interrutCycle } =
+    useContext(CyclesContext)
+  const newCycleForm = useForm<NewCycleFormData>({
+    resolver: zodResolver(newCycleFormValidadeSchema),
+    defaultValues: {
+      task: '',
+      minutesAmount: 0,
+    },
+  })
+  const { handleSubmit, watch, reset } = newCycleForm
+  function handleCreateNewCycle(data: NewCycleFormData) {
+    createNewCycle(data)
+    reset()
   }
-  // function handleCreateNewCycle(data: NewCycleFormData) {
-  //   const id = String(new Date().getTime())
-  //   const newCycle: Cycle = {
-  //     id,
-  //     task: data.task,
-  //     minutesAmount: data.minutesAmount,
-  //     startDate: new Date(),
-  //     // isActive: false,
-  //   }
-  //   setCycles((state) => [...cycles, newCycle])
-  //   setActiveCycleId(id)
-  //   setAmountSecondsPassed(0)
-  //   reset()
-  // }
-  function handleInterrutCycle() {
-    setCycles((state) =>
-      state.map((cycle) => {
-        if (cycle.id === activeCycleId) {
-          return { ...cycle, interruptedDate: new Date() }
-        } else {
-          return cycle
-        }
-      }),
-    )
-    setActiveCycleId(null)
-  }
-
-  // const task = watch('task')
-  // const isSubmitDisabled = !task
+  const task = watch('task')
+  const isSubmitDisabled = !task
   return (
     <HomeContainer>
-      <form
-        // onSubmit={handleSubmit(handleCreateNewCycle)}
-        action=""
-      >
-        <CyclesContext.Provider
-          value={{ activeCycle, activeCycleId, markCurrenteCycleAsFinished }}
-        >
-          {/* <NewCycleForm /> */}
-          <CountDown />
-        </CyclesContext.Provider>
+      <form onSubmit={handleSubmit(handleCreateNewCycle)} action="">
+        <FormProvider {...newCycleForm}>
+          <NewCycleForm />
+        </FormProvider>
+        <CountDown />
+
         {activeCycle ? (
-          <StopCountdownButton onClick={handleInterrutCycle} type="button">
+          <StopCountdownButton onClick={interrutCycle} type="button">
             <HandPalm size={24} />
             Interromper
           </StopCountdownButton>
         ) : (
-          <StartCountdownButton
-            type="submit"
-            // disabled={isSubmitDisabled}
-          >
+          <StartCountdownButton type="submit" disabled={isSubmitDisabled}>
             <Play size={24} />
             Começar
           </StartCountdownButton>
